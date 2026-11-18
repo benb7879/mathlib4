@@ -26,6 +26,7 @@ public import Mathlib.Topology.Algebra.Module.FiniteDimension
 public import Mathlib.Topology.Algebra.UniformField
 public import Mathlib.Analysis.Normed.Operator.BoundedLinearMaps
 public import Mathlib.Analysis.Normed.Unbundled.IsPowMulFaithful
+public import Mathlib.Analysis.Normed.Unbundled.IsPowMulTrivial
 public import Mathlib.Analysis.Normed.Unbundled.SeminormFromConst
 public import Mathlib.FieldTheory.IntermediateField.Adjoin.Basic
 public import Mathlib.Topology.Algebra.Module.FiniteDimension
@@ -56,19 +57,6 @@ instance (K : Type*) [NormedField K] [CompleteSpace K] :
 open TensorProduct
 
 namespace AbsoluteValue
-
-section PRed
-
-variable {K L : Type*} [SeminormedCommRing K] [DivisionRing L] [Algebra K L]
-  [Algebra.IsIntegral K L]
-
-/-- A power-multiplicative norm on an algebraic extension of a trivially normed field is trivial. -/
-theorem AlgebraNorm.eq_one_of_trivial
-    (hK : ∀ x : K, ‖x‖ ≤ 1) (f : AlgebraNorm K L) (hf : IsPowMul f)
-    (x : L) (hx : x ≠ 0) : f x = 1 := by
-  sorry
-
-end PRed
 
 section modtop
 
@@ -138,14 +126,6 @@ variable {K L : Type*} [Field K] [Field L] [Algebra K L]
 variable [Algebra v.Completion w.Completion] [ContinuousSMul v.Completion w.Completion]
   [IsScalarTower K v.Completion w.Completion]
 
-theorem closed_fg_normedField
-    {𝕜 E : Type*} [NormedField 𝕜] [CompleteSpace 𝕜]
-    [NormedAddCommGroup E] [NormedSpace 𝕜 E]
-    (S : Submodule 𝕜 E) (hS : S.FG) :
-    IsClosed (S : Set E) := by
-  have : Module.Finite 𝕜 S := Module.Finite.iff_fg.mpr hS
-  apply Submodule.isClosed_of_finite_of_isModuleTopology
-
 instance [Module.Finite K L] : Module.Finite v.Completion w.Completion := by
   have hi : Isometry (algebraMap v.Completion w.Completion) := by
     rw [AbsoluteValue.Completion.algebraMap_eq_of_liesOver v w]
@@ -155,23 +135,19 @@ instance [Module.Finite K L] : Module.Finite v.Completion w.Completion := by
       norm_smul_le := fun a b => by
         rw [Algebra.smul_def, norm_mul,
           (AddMonoidHomClass.isometry_iff_norm _).mp hi a] }
-  -- some typeclass errors below, hopefully fixed by #45508
   let f : L →ₗ[K] w.Completion :=
     (IsScalarTower.toAlgHom K L w.Completion).toLinearMap
   let S : Submodule v.Completion w.Completion :=
     Submodule.span v.Completion (f.range : Set w.Completion)
   have hS : S.FG :=
     (Submodule.FG.of_finite (N := f.range)).span
-  have hclosed : IsClosed (S : Set w.Completion) :=
-    closed_fg_normedField S hS
+  have hclosed : IsClosed (S : Set w.Completion) := by
+    have := Module.Finite.iff_fg.mpr hS
+    apply Submodule.isClosed_of_finite_of_isModuleTopology
   have htop : S = ⊤ := by
     apply Submodule.eq_top_iff'.mpr
-    intro x
-    refine Completion.induction_on x hclosed ?_
-    intro a
-    refine Submodule.subset_span ⟨a.ofAbs, ?_⟩
-    -- rfl?
-    sorry
+    refine fun x ↦ Completion.induction_on x hclosed fun a ↦ ?_
+    exact Submodule.subset_span ⟨a.ofAbs, AbsoluteValue.Completion.algebraMap_def w a⟩
   rw [Module.finite_def]
   exact htop ▸ hS
 
